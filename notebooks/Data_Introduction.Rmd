@@ -1,0 +1,102 @@
+---
+title: "WeGo Data Introduction"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+
+wego <- read_csv("../data/Route 50 Timepoint and Headway Data, 1-1-2023 through 5-12-2025.csv")
+```
+
+All the data that you have been provided is from Route 50, Charlotte Pike.
+```{r}
+wego |> 
+  group_by(ROUTE_ABBR) |> 
+  summarize(n())
+```
+
+Each trip can be identified by the combination of DATE/CALENDAR_ID plus the TRIP_ID.
+**Warning:** The TRIP_ID refers to the route and time but will be used across multiple days.
+
+The data contains multiple **time points** for each trip. There are more stops along the route than the time point, but the time points are the points with specific scheduled times the bus operators must adhere to.
+
+The first stop of a trip has a TRIP_EDGE of 1, the last has a TRIP_EDGE of 2, and the intermediate stops are TRIP_EDGE 0.
+
+Here is the first trip in the dataset. It occurred on January 1, 2023 and was scheduled to start at 5:34 and end at 6:05.
+
+```{r}
+wego |> 
+  filter(CALENDAR_ID == 120230101) |> 
+  filter(TRIP_ID == 332422) |> 
+  select(DATE, CALENDAR_ID, TRIP_ID, ROUTE_ABBR, TIME_POINT_ABBR, TRIP_EDGE, SCHEDULED_TIME)
+```
+
+Note that the same TRIP_ID appears on the following day with a different CALENDAR_ID.
+
+```{r}
+wego |> 
+  filter(CALENDAR_ID == 120230102) |> 
+  filter(TRIP_ID == 332422) |> 
+  select(DATE, CALENDAR_ID, TRIP_ID, ROUTE_ABBR, TIME_POINT_ABBR, TRIP_EDGE, SCHEDULED_TIME)
+```
+
+**Adherence** refers to the difference between scheduled time and the actual time that the bus departs from a stop.
+A negative value for ADHERENCE indicates that the bus is late, and a positive indicates that the bus is early.
+Generally, an adherence value less than -6 is considered late, and greater than 1 is considered early, but there are some exceptions. For example, a positive adherence for the end of a trip (TRIP_EDGE 2) is not considered early, since it is not a problem is a bus ends its trip early as long as it didn't pass other timepoints early along the way. You can check wheter WeGo considered a trip on-time, early, or late using the ADJUSTED_EARLY_COUNT, ADJUSTED_LATE_COUNT, and ADJUSTED_ONTIME_COUNT columns.
+
+Here is an example of a trip where all time points would be considered to be on time. Notice that at the end of the trip, the bus was almost 3 minutes early, but was still counted as on-time since this was a trip edge of 2. Also, the bus departed more than 5 minutes late but was still considered to be on-time.
+
+```{r}
+wego |> 
+  filter(CALENDAR_ID == 120230101) |> 
+  filter(TRIP_ID == 332423) |> 
+  select(DATE, CALENDAR_ID, TRIP_ID, ROUTE_ABBR,
+         TIME_POINT_ABBR, TRIP_EDGE,
+         SCHEDULED_TIME, ACTUAL_DEPARTURE_TIME, ADHERENCE,
+         ADJUSTED_EARLY_COUNT, ADJUSTED_LATE_COUNT, ADJUSTED_ONTIME_COUNT)
+```
+
+Here's an example of another trip later that same day that was considered late at the first time point, departing 8 minutes behind schedule.
+
+```{r}
+wego |> 
+  filter(CALENDAR_ID == 120230101) |> 
+  filter(TRIP_ID == 332493) |> 
+  select(DATE, CALENDAR_ID, TRIP_ID, ROUTE_ABBR,
+         TIME_POINT_ABBR, TRIP_EDGE,
+         SCHEDULED_TIME, ACTUAL_DEPARTURE_TIME, ADHERENCE,
+         ADJUSTED_EARLY_COUNT, ADJUSTED_LATE_COUNT, ADJUSTED_ONTIME_COUNT)
+```
+
+This trip departed nearly 5 minutes early from the first time point, so that time point would be considred early.
+
+```{r}
+wego |> 
+  filter(CALENDAR_ID == 120230101) |> 
+  filter(TRIP_ID == 332431) |> 
+  select(DATE, CALENDAR_ID, TRIP_ID, ROUTE_ABBR,
+         TIME_POINT_ABBR, TRIP_EDGE,
+         SCHEDULED_TIME, ACTUAL_DEPARTURE_TIME, ADHERENCE,
+         ADJUSTED_EARLY_COUNT, ADJUSTED_LATE_COUNT, ADJUSTED_ONTIME_COUNT)
+```
+
+**Headway** is the amount of time between a bus and the prior bus at the same stop. In the dataset, the amount of headway scheduled is contained in the SCHEDULED_HDWY column and indicates the difference between the scheduled time for a particular stop and the scheduled time for the previous bus on that same stop.
+
+This dataset contains a column, HDWY_DEV, which shows the amount of deviation from the scheduled headway. **Bunching** occurs when there is shorter headway than scheduled, which would appear asa negative HDWY_DEV value. **Gapping** is when there is more headway than scheduled and appears as a positive value in the HDWY_DEV column. Note that you can calculate headway deviation percentage as HDWY_DEV/SCHEDULED_HDWY.
+
+The generally accepted range of headway deviation is 50% to 150% of the scheduled headway, so if scheduled headway is 10, minutes, a headway deviation of up to 5 minutes would be acceptable (but not ideal).
+
+Here you can see consecutive trips at the same time point. Notice that the scheduled headway is based on the scheduled time and that the actual headway is based on the actual departure time.
+
+```{r}
+wego |> 
+  filter(ROUTE_DIRECTION_NAME == 'TO DOWNTOWN') |> 
+  filter(TIME_POINT_ABBR == 'CH46') |> 
+  select(DATE, TRIP_ID, TIME_POINT_ABBR, ROUTE_DIRECTION_NAME, TRIP_EDGE,
+         SCHEDULED_TIME, SCHEDULED_HDWY,
+         ACTUAL_DEPARTURE_TIME, ACTUAL_HDWY, HDWY_DEV) |> 
+  arrange(DATE, SCHEDULED_TIME) |> 
+  slice_head(n = 5)
+```
+
