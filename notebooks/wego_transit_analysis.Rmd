@@ -1,0 +1,87 @@
+---
+title: "wego_transit_analysis"
+output: html_document
+date: "2026-01-15"
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+
+wego <- read_csv("../data/Route 50 Timepoint and Headway Data, 1-1-2023 through 5-12-2025.csv")
+```
+
+
+```{r}
+# Create new date time column
+wego$DATE_TIME <- ymd(wego$DATE) + hms(wego$SCHEDULED_TIME)
+
+# Examine Data
+wego
+```
+
+
+```{r}
+
+# Filter February TSP values
+feb3_10_tsp <- wego |> 
+  filter(between(DATE_TIME, 
+                 as.Date("2025-02-03 12:00:00"), 
+                 as.Date("2025-02-10 12:00:00")))
+
+# Filter Feb-Apr TSP with busses only 2 minutes late or more
+feb10_apr28_tsp <- wego |> 
+  filter(between(DATE_TIME, 
+                 as.Date("2025-02-10 12:00:00"), 
+                 as.Date("2025-04-28 12:00:00"))) |> 
+  filter(ADHERENCE <= -2)
+
+# Filter May TSP values
+may5_12_tsp <- wego |> 
+  filter(between(DATE_TIME, 
+                 as.Date("2025-05-05 12:00:00"), 
+                 as.Date("2025-05-12 12:00:00")))
+
+  
+```
+
+```{r}
+# Add day of week column
+wego <- wego |>
+  mutate(
+    DATE_TIME = as.POSIXct(DATE_TIME),
+    DAY_OF_WEEK = wday(DATE_TIME, 
+                       label = TRUE, 
+                       abbr = FALSE))
+
+wego
+```
+
+
+```{r}
+
+wego <- wego |>  mutate(
+  tsp_indicator = if_else(
+    between(DATE_TIME, 
+            as.Date("2025-02-03 12:00:00"), 
+            as.Date("2025-02-10 12:00:00")) |
+    between(DATE_TIME, 
+            as.Date("2025-02-10 12:00:00"), 
+            as.Date("2025-04-28 12:00:00")) |
+    between(DATE_TIME, 
+            as.Date("2025-05-05 12:00:00"), 
+            as.Date("2025-05-12 12:00:00")), 1, 0)
+  )
+
+```
+
+```{r}
+wego_log_reg <- glm(ADJUSTED_LATE_COUNT ~ tsp_indicator,
+                    data = wego,
+                    family = "binomial")
+wego_log_reg
+
+summary(wego_log_reg)
+```
+
