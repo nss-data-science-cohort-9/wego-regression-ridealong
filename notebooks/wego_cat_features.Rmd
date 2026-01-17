@@ -1,0 +1,196 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+
+
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+```{r}
+library(tidyverse)
+# Install Package to combine date and time
+library(lubridate)
+
+wego <- read_csv("../data/Route 50 Timepoint and Headway Data, 1-1-2023 through 5-12-2025.csv")
+
+```
+```{r}
+wego
+```
+
+```{r}
+# Create new date time column
+wego$DATE_TIME <- ymd(wego$DATE) + hms(wego$SCHEDULED_TIME)
+
+# Examine Data
+wego
+```
+
+```{r}
+
+
+# Filter February TSP values
+feb3_10_tsp <- wego |> 
+  filter(between(DATE_TIME, 
+                 as.Date("2025-02-03 12:00:00"), 
+                 as.Date("2025-02-10 12:00:00")))
+
+# Filter Feb-Apr TSP with busses only 2 minutes late or more
+feb10_apr28_tsp <- wego |> 
+  filter(between(DATE_TIME, 
+                 as.Date("2025-02-10 12:00:00"), 
+                 as.Date("2025-04-28 12:00:00"))) |> 
+  filter(ADHERENCE <= -2)
+
+# Filter May TSP values
+may5_12_tsp <- wego |> 
+  filter(between(DATE_TIME, 
+                 as.Date("2025-05-05 12:00:00"), 
+                 as.Date("2025-05-12 12:00:00")))
+
+  
+```
+
+
+
+
+```{r}
+
+# Add day of week column
+wego <- wego |>
+  mutate(
+    DATE_TIME = as.POSIXct(DATE_TIME),
+    DAY_OF_WEEK = wday(DATE_TIME, 
+                       label = TRUE, 
+                       abbr = FALSE))
+
+wego
+
+```
+
+
+```{r}
+
+# Combine tsp variables into one 
+tsp_rows <- bind_rows(
+  feb3_10_tsp,
+  feb10_apr28_tsp,
+  may5_12_tsp
+) |> 
+  select('ADHERENCE_ID', 'DATE_TIME') |> 
+  distinct() |> 
+  mutate(tsp = 1)  # Add tsp indicator column for each distinct adherence id
+
+wego <- wego |> 
+  left_join(
+    tsp_rows,
+    by = c('ADHERENCE_ID', 'DATE_TIME')
+  ) |> 
+  mutate(tsp = coalesce(tsp, 0))
+
+```
+
+
+```{r}
+
+
+```
+
+
+```{r}
+
+wego |> view()
+
+
+```
+
+
+```{r}
+
+wego |>  mutate(
+  tsp_indicator = if_else(
+    between(DATE_TIME, 
+            as.Date("2025-02-03 12:00:00"), 
+            as.Date("2025-02-10 12:00:00")) |
+    (between(DATE_TIME, 
+            as.Date("2025-02-10 12:00:00"), 
+            as.Date("2025-04-28 12:00:00")) &
+       ADHERENCE <= -2) |
+    between(DATE_TIME, 
+            as.Date("2025-05-05 12:00:00"), 
+            as.Date("2025-05-12 12:00:00")), 1, 0)
+    
+  )
+
+```
+
+```{r}
+wego <- wego |> mutate(
+  HOUR = hms(SCHEDULED_TIME) |> 
+    hour()
+  )
+
+```
+
+```{r}
+
+wego |>
+  mutate(
+    time_of_day = case_when(
+      between(HOUR, 4, 5) ~ "early_morning",
+      between(HOUR, 6, 8) ~ "morning_peak",
+      between(HOUR, 9, 14) ~ "midday",
+      between(HOUR, 15, 17) ~ "pm_peak",
+      between(HOUR, 18, 20) ~ "evening",
+      between(HOUR, 21, 23) ~ "late_night",
+      between(HOUR, 0, 3) ~ "late_night",
+      .default = "other"
+    )
+  )
+  
+
+
+
+```
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+
+
+
+
+
