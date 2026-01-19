@@ -12,7 +12,6 @@ library(lubridate)
 wego <- read_csv("../data/Route 50 Timepoint and Headway Data, 1-1-2023 through 5-12-2025.csv")
 ```
 
-
 ```{r}
 # Create new date time column
 wego$DATE_TIME <- ymd(wego$DATE) + hms(wego$SCHEDULED_TIME)
@@ -21,30 +20,6 @@ wego$DATE_TIME <- ymd(wego$DATE) + hms(wego$SCHEDULED_TIME)
 wego
 ```
 
-
-```{r}
-
-# Filter February TSP values
-feb3_10_tsp <- wego |> 
-  filter(between(DATE_TIME, 
-                 as.Date("2025-02-03 12:00:00"), 
-                 as.Date("2025-02-10 12:00:00")))
-
-# Filter Feb-Apr TSP with busses only 2 minutes late or more
-feb10_apr28_tsp <- wego |> 
-  filter(between(DATE_TIME, 
-                 as.Date("2025-02-10 12:00:00"), 
-                 as.Date("2025-04-28 12:00:00"))) |> 
-  filter(ADHERENCE <= -2)
-
-# Filter May TSP values
-may5_12_tsp <- wego |> 
-  filter(between(DATE_TIME, 
-                 as.Date("2025-05-05 12:00:00"), 
-                 as.Date("2025-05-12 12:00:00")))
-
-  
-```
 
 ```{r}
 # Add day of week column
@@ -61,6 +36,7 @@ wego
 
 ```{r}
 
+# Build indicator column for TSP time-frames
 wego <- wego |>  mutate(
   tsp_indicator = if_else(
     between(DATE_TIME, 
@@ -77,6 +53,66 @@ wego <- wego |>  mutate(
 ```
 
 ```{r}
+glimpse(wego)
+```
+
+```{r}
+# Add hour column to data
+wego_hr <- wego |> mutate(
+  HOUR_COLUMN = hms(SCHEDULED_TIME) |> 
+    hour()
+  )
+  
+```
+
+```{r}
+# View ocurrences obscured by N/A values
+wego_hr[is.na(wego_hr$HOUR_COLUMN),]
+
+```
+
+```{r}
+# Adjust SCHEDULED_TIME values to be consistent throughout column
+wego_hr$SCHEDULED_TIME = str_sub(
+  wego_hr$SCHEDULED_TIME, 
+  start = -8, 
+  end = -1
+  )
+
+# Save to original dataframe
+wego_hr <- wego |> mutate(
+  HOUR_COLUMN = hms(SCHEDULED_TIME) |> 
+    hour()
+  )
+
+wego_hr
+
+```
+
+```{r}
+# Add time of day feature with hour column
+wego_hr <- wego_hr |> mutate(
+  time_of_day = case_when(
+    HOUR_COLUMN >= 4 & HOUR_COLUMN < 6  ~ 'early_morning',
+    HOUR_COLUMN >= 6 & HOUR_COLUMN < 9  ~ 'morning_peak',
+    HOUR_COLUMN >= 9 & HOUR_COLUMN < 15 ~ 'midday',
+    HOUR_COLUMN >= 15 & HOUR_COLUMN < 18 ~ 'pm_peak',
+    HOUR_COLUMN >= 18 & HOUR_COLUMN < 21 ~ 'evening',
+    TRUE ~ 'late_night')
+  )
+
+```
+
+```{r}
+wego_hr |> 
+  group_by(time_of_day) |> 
+  summarize(mean(ADJUSTED_LATE_COUNT))
+  
+```
+
+
+```{r}
+# Fit logistic regression model based on tsp
 wego_log_reg <- glm(ADJUSTED_LATE_COUNT ~ tsp_indicator,
                     data = wego,
                     family = "binomial")
@@ -84,4 +120,34 @@ wego_log_reg
 
 summary(wego_log_reg)
 ```
+
+```{r}
+predict(object = wego_log_reg, 
+        newdata = data.frame(tsp_indicator = 0), 
+        type= 'response') 
+
+```
+
+```{r}
+predict(object = wego_log_reg, 
+        newdata = data.frame(tsp_indicator = 1), 
+        type= 'response') 
+
+```
+
+
+```{r}
+# Fit model based on time of day
+glm(ADJUSTED_LATE_COUNT ~ time_of_day,
+                    data = wego_hr,
+                    family = "binomial")
+```
+
+
+
+
+
+
+
+
 
