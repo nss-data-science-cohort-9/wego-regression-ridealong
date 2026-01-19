@@ -21,7 +21,9 @@ The preview shows you a rendered HTML copy of the contents of the editor. Conseq
 
 ```{r}
 library(tidyverse)
-# Install Package to combine date and time
+# install for visualizations 
+library(ggplot2)
+# install to combine date and time
 library(lubridate)
 
 wego <- read_csv("../data/Route 50 Timepoint and Headway Data, 1-1-2023 through 5-12-2025.csv")
@@ -106,12 +108,6 @@ wego <- wego |>
 
 ```{r}
 
-
-```
-
-
-```{r}
-
 wego |> view()
 
 
@@ -120,7 +116,7 @@ wego |> view()
 
 ```{r}
 
-wego |>  mutate(
+wego <- wego |>  mutate(
   tsp_indicator = if_else(
     between(DATE_TIME, 
             as.Date("2025-02-03 12:00:00"), 
@@ -135,6 +131,8 @@ wego |>  mutate(
     
   )
 
+wego
+
 ```
 
 ```{r}
@@ -147,7 +145,7 @@ wego <- wego |> mutate(
 
 ```{r}
 
-wego |>
+wego <- wego |>
   mutate(
     time_of_day = case_when(
       between(HOUR, 4, 5) ~ "early_morning",
@@ -160,24 +158,68 @@ wego |>
       .default = "other"
     )
   )
-  
 
-
+wego
 
 ```
+
 ```{r}
+
+tod_table = table(wego$time_of_day)
+pt_tod_table <- prop.table(tod_table)
+# tod_data <- as.data.frame(table(wego$time_of_day))
+# colnames(tod_data) <- c("time of day", "count")
+
+# tod_data
+pt_tod_table
+
 ```
 
 
 ```{r}
+
+# Create the bar plot
+# p2 <- ggplot(tod_table, aes(x = "time of day", y = "count", fill = "time_of_day")) +
+#   geom_bar(stat = "identity") +
+#   labs(y = "Number of late stops", title = "Distribution by Late Bus Stops") +
+#   theme_minimal()
+# p2
+barplot(table(wego$time_of_day), main = "Time of day distribution")#, col = color)
+
 ```
 
 
 ```{r}
+
+table_tod <- pt_tod_table 
+# Create a color vector
+color <- rainbow(nrow(table_tod))
+# Set the rotation for x-axis labels to 45 degrees
+par(las=2)
+# Create the vertically stacked bar plot
+bp <- barplot(table_tod, main = "Time of day distribution", col = color)
+# Add the legend
+legend("topright", legend = rownames(table_tod),cex = 0.75, fill = color)
+# Add x-axis labels with a 45 degree angle
+axis(1, at=bp, labels=colnames(table_tod), las=2, cex.axis=2)
+
 ```
 
 
 ```{r}
+
+late_tod <- table(wego$time_of_day, wego$ADJUSTED_LATE_COUNT)
+# Create a color vector
+color <- rainbow(nrow(late_tod))
+# Set the rotation for x-axis labels to 45 degrees
+par(las=2)
+# Create the vertically stacked bar plot
+bp <- barplot(late_tod, main = "Late bus dist", col = color)
+# Add the legend
+legend("topright", legend = rownames(late_tod),cex = 0.9, fill = color)
+# Add x-axis labels with a 45 degree angle
+axis(1, at=bp, labels=colnames(late_tod), las=2, cex.axis=1)
+
 ```
 
 
