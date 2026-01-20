@@ -101,9 +101,11 @@ wego_hr <- wego_hr |> mutate(
     TRUE ~ 'late_night')
   )
 
+wego_hr
 ```
 
 ```{r}
+# Show proportion of late buses by time of day
 wego_hr |> 
   group_by(time_of_day) |> 
   summarize(mean(ADJUSTED_LATE_COUNT))
@@ -122,6 +124,7 @@ summary(wego_log_reg)
 ```
 
 ```{r}
+# Show percentage of late stops without tsp
 predict(object = wego_log_reg, 
         newdata = data.frame(tsp_indicator = 0), 
         type= 'response') 
@@ -129,6 +132,7 @@ predict(object = wego_log_reg,
 ```
 
 ```{r}
+# # Show percentage of late stops with tsp
 predict(object = wego_log_reg, 
         newdata = data.frame(tsp_indicator = 1), 
         type= 'response') 
@@ -143,11 +147,108 @@ glm(ADJUSTED_LATE_COUNT ~ time_of_day,
                     family = "binomial")
 ```
 
+```{r}
+# Add indicator column to wego_hr
+wego_hr <- wego_hr |>  mutate(
+  tsp_indicator = if_else(
+    between(DATE_TIME, 
+            as.Date("2025-02-03 12:00:00"), 
+            as.Date("2025-02-10 12:00:00")) |
+    between(DATE_TIME, 
+            as.Date("2025-02-10 12:00:00"), 
+            as.Date("2025-04-28 12:00:00")) |
+    between(DATE_TIME, 
+            as.Date("2025-05-05 12:00:00"), 
+            as.Date("2025-05-12 12:00:00")), 1, 0)
+  )
+
+```
 
 
+```{r}
+glm(ADJUSTED_LATE_COUNT ~ tsp_indicator * ROUTE_DIRECTION_NAME,
+                    data = wego_hr,
+                    family = "binomial")
+```
+
+```{r}
+glm(ADJUSTED_LATE_COUNT ~ tsp_indicator * time_of_day,
+                    data = wego_hr,
+                    family = "binomial")
+```
+
+```{r}
+
+late_prop_by_time <- wego_hr |>
+  group_by(time_of_day) |>
+  summarize(mean_late_count = mean(ADJUSTED_LATE_COUNT)) 
 
 
+ggplot(late_prop_by_time, aes(x = time_of_day, y = mean_late_count)) +
+  geom_col(fill = "#b5ffd0", color = "black") + 
+  labs(
+    title = "Average Late Count by Time of Day",
+    x = "Time of Day",
+    y = "Late Count Proportion"
+  )
+
+```
+
+```{r}
+
+avg_late_count_by_day <- ggplot(late_prop_by_time, aes(x = time_of_day, y = mean_late_count)) +
+  geom_col(fill = "#b5ffd0", color = "black") + 
+  labs(
+    title = "Average Late Count by Time of Day",
+    x = "Time of Day",
+    y = "Late Count Proportion"
+  )
+
+ggsave(
+  filename = "avg_late_count_by_day.png",
+  plot = avg_late_count_by_day,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+```
 
 
+```{r}
+
+late_prop_by_time <- wego_hr |>
+  group_by(DAY_OF_WEEK) |>
+  summarize(mean_late_count = mean(ADJUSTED_LATE_COUNT)) 
+
+
+ggplot(late_prop_by_time, aes(x = DAY_OF_WEEK, y = mean_late_count, na.rm = TRUE)) +
+  geom_col(fill = "#b5ffd0", color = "black") + 
+  labs(
+    title = "Average Late Count by Day of Week",
+    x = "Day of Week",
+    y = "Late Count Proportion"
+  )
+
+```
+
+
+```{r}
+avg_day_late_count <- ggplot(late_prop_by_time, aes(x = DAY_OF_WEEK, y = mean_late_count, na.rm = TRUE)) +
+  geom_col(fill = "#b5ffd0", color = "black") + 
+  labs(
+    title = "Average Late Count by Day of Week",
+    x = "Day of Week",
+    y = "Late Count Proportion"
+  )
+
+ggsave(
+  filename = "avg_day_late_count.png",
+  plot = avg_day_late_count,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+```
 
 
