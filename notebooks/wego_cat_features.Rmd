@@ -167,24 +167,15 @@ wego
 
 tod_table = table(wego$time_of_day)
 pt_tod_table <- prop.table(tod_table)
-# tod_data <- as.data.frame(table(wego$time_of_day))
-# colnames(tod_data) <- c("time of day", "count")
 
-# tod_data
 pt_tod_table
-
+tod_table
 ```
 
 
 ```{r}
 
-# Create the bar plot
-# p2 <- ggplot(tod_table, aes(x = "time of day", y = "count", fill = "time_of_day")) +
-#   geom_bar(stat = "identity") +
-#   labs(y = "Number of late stops", title = "Distribution by Late Bus Stops") +
-#   theme_minimal()
-# p2
-barplot(table(wego$time_of_day), main = "Time of day distribution")#, col = color)
+barplot(table(wego$time_of_day), main = "Time of day distribution")
 
 ```
 
@@ -201,7 +192,7 @@ bp <- barplot(table_tod, main = "Time of day distribution", col = color)
 # Add the legend
 legend("topright", legend = rownames(table_tod),cex = 0.75, fill = color)
 # Add x-axis labels with a 45 degree angle
-axis(1, at=bp, labels=colnames(table_tod), las=2, cex.axis=2)
+# axis(1, at=bp, labels=colnames(table_tod), las=2, cex.axis=2)
 
 ```
 
@@ -221,6 +212,62 @@ legend("topright", legend = rownames(late_tod),cex = 0.9, fill = color)
 axis(1, at=bp, labels=colnames(late_tod), las=2, cex.axis=1)
 
 ```
+```{r}
+count_tod <- wego |>
+  count(time_of_day)
+
+count_tod
+```
+
+```{r}
+unique(wego$ADJUSTED_LATE_COUNT)
+```
+```{r}
+wego
+```
+
+
+```{r}
+# count_tod <- wego |>
+#   count(time_of_day)
+# # value <- count_tod$n
+# value = count_tod
+#   # table(wego$time_of_day)
+# condition <- tod <- c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night", "late_night", "other") #wego$time_of_day
+# specie <- wego$ADJUSTED_LATE_COUNT
+# 
+# ggplot(wego, aes(fill=condition, y=value, x=specie)) + 
+#     geom_bar(position="fill", stat="identity")
+
+
+
+```
+
+
+```{r}
+
+wego_tod_count_late <- wego |> 
+  group_by(time_of_day, ADJUSTED_LATE_COUNT) |> 
+  summarize(n = n())
+
+
+wego_tod_count_late
+```
+
+
+```{r}
+
+ggplot(wego_tod_count_late, aes(fill=time_of_day, y=n, x=factor(ADJUSTED_LATE_COUNT))) + 
+  geom_bar(position="fill", stat="identity")+ 
+  xlab("Ontime (0) and Late (1) Buses") +
+  ylab("Proportion of Buses") +
+  ggtitle("Proportion of Late and Ontime Buses Based on Time of Day")
+
+```
+
+
+```{r}
+```
 
 
 ```{r}
@@ -231,6 +278,16 @@ axis(1, at=bp, labels=colnames(late_tod), las=2, cex.axis=1)
 ```
 
 
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
 
 
 
