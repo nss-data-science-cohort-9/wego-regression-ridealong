@@ -1,0 +1,93 @@
+---
+title: "Wego_Micheal_branch"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+
+```{r}
+
+library(tidyverse)
+library(lubridate, warn.conflicts = FALSE) 
+
+wego <- read_csv("../Data/Route 50 Timepoint and Headway Data, 1-1-2023 through 5-12-2025 (1).csv")
+wego
+```
+```{r}
+#Create Date_time column and put it before the Actual_departure_time column 
+wego <- wego %>% 
+  mutate(
+    DATE_TIME = ymd(DATE) + hms(SCHEDULED_TIME),
+         .before = ACTUAL_DEPARTURE_TIME)
+#Check result to ensure things were added properly 
+wego
+```
+```{r}
+#create a day, month and year column (year column may not be needed but we'll do that one for fun)
+
+wego <- wego %>%
+  mutate(
+    DAY = wday(DATE, label = TRUE, abbr = FALSE),
+    MONTH = month(DATE, label = TRUE, abbr = FALSE),
+    YEAR = year(DATE),
+    .before = DATE_TIME
+  )
+#check results 
+wego
+
+```
+
+```{r}
+# Create TSP segmented dates and HDWY% columns ensuring to check for accuracy after each column creation
+wego <- wego %>%
+  mutate(FEB3_tspON_UNCON = between(DATE_TIME, 
+                 as.Date("2025-02-03 12:00:00"), 
+                 as.Date("2025-02-10 12:00:00")),
+         .before = DAY) %>% 
+  mutate(FEB10_tspON_Condi = between(DATE_TIME, 
+                 as.Date("2025-02-10 12:00:00"), 
+                 as.Date("2025-04-28 12:00:00")),
+         .before = FEB3_tspON_UNCON) %>%
+  filter(ADHERENCE <= -2) %>%
+  mutate(APRIL28_tspOFF = between(DATE_TIME,
+                                 as.Date('2025-04-28 12:00:00'),
+                                 as.Date('2025-05-05 12:00:00')),
+         .before = FEB10_tspON_Condi) %>%
+  mutate(MAY5_tspON_UNCON = between(DATE_TIME,
+                                     as.Date('2025-05-05 12:00:00'),
+                                    as.Date('2025-05-12 12:00:00')),
+         .before = APRIL28_tspOFF)
+# Create HDWY deviation percentage column
+wego <- wego %>%
+  mutate(HDWY_PERC_DEV = (HDWY_DEV/SCHEDULED_HDWY) * 100,
+         .before = ADHERENCE)
+wego
+# Create TSP conditional HDWY filter 
+wego_hdwy <- wego %>%
+  filter(DATE_TIME > as.Date("2025-05-12 12:00:00")) %>%
+            filter(HDWY_PERC_DEV >= 20)
+
+wego_hdwy
+         
+
+```
+
+```{r}
+
+wego_hdwy_tsp <- wego_hdwy_tsp %>% mutate(TSP_INDICATOR = if_else(between(DATE_TIME, 
+                 as.Date("2025-02-03 12:00:00"), 
+                 as.Date("2025-02-10 12:00:00")) |
+    between(DATE_TIME, 
+                 as.Date("2025-02-10 12:00:00"), 
+                 as.Date("2025-04-28 12:00:00")) |
+    between(DATE_TIME, 
+                 as.Date("2025-05-05 12:00:00"), 
+                 as.Date("2025-05-12 12:00:00")), 1, 0),)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
