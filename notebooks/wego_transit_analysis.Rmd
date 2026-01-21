@@ -166,16 +166,33 @@ wego_hr <- wego_hr |>  mutate(
 
 
 ```{r}
-glm(ADJUSTED_LATE_COUNT ~ tsp_indicator * ROUTE_DIRECTION_NAME,
+time_day_log <- glm(ADJUSTED_LATE_COUNT ~ tsp_indicator * ROUTE_DIRECTION_NAME,
                     data = wego_hr,
                     family = "binomial")
 ```
 
 ```{r}
-glm(ADJUSTED_LATE_COUNT ~ tsp_indicator * time_of_day,
+summary(time_day_log)
+```
+
+
+```{r}
+l <- glm(ADJUSTED_LATE_COUNT ~ tsp_indicator * time_of_day,
                     data = wego_hr,
                     family = "binomial")
 ```
+
+```{r}
+summary(l)
+```
+
+
+```{r}
+glm(ADJUSTED_LATE_COUNT ~ tsp_indicator + time_of_day,
+                    data = wego_hr,
+                    family = "binomial")
+```
+
 
 ```{r}
 
