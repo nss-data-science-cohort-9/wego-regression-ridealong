@@ -25,7 +25,8 @@ library(tidyverse)
 library(ggplot2)
 # install to combine date and time
 library(lubridate)
-
+# for melting a df
+library(reshape)
 wego <- read_csv("../data/Route 50 Timepoint and Headway Data, 1-1-2023 through 5-12-2025.csv")
 
 ```
@@ -50,18 +51,20 @@ feb3_10_tsp <- wego |>
                  as.Date("2025-02-03 12:00:00"), 
                  as.Date("2025-02-10 12:00:00")))
 
-# Filter Feb-Apr TSP with busses only 2 minutes late or more
+# Filter Feb-Apr TSP with buses only 2 minutes late or more
 feb10_apr28_tsp <- wego |> 
   filter(between(DATE_TIME, 
                  as.Date("2025-02-10 12:00:00"), 
-                 as.Date("2025-04-28 12:00:00"))) |> 
-  filter(ADHERENCE <= -2)
+                 as.Date("2025-04-28 12:00:00")))
 
 # Filter May TSP values
 may5_12_tsp <- wego |> 
   filter(between(DATE_TIME, 
                  as.Date("2025-05-05 12:00:00"), 
                  as.Date("2025-05-12 12:00:00")))
+
+may12_tsp <- wego |> 
+  filter(DATE_TIME > as.Date("2025-05-12 12:00:00"))
 
   
 ```
@@ -90,7 +93,8 @@ wego
 tsp_rows <- bind_rows(
   feb3_10_tsp,
   feb10_apr28_tsp,
-  may5_12_tsp
+  may5_12_tsp,
+  may12_tsp
 ) |> 
   select('ADHERENCE_ID', 'DATE_TIME') |> 
   distinct() |> 
@@ -108,7 +112,7 @@ wego <- wego |>
 
 ```{r}
 
-wego |> view()
+wego #|> view()
 
 
 ```
@@ -116,22 +120,22 @@ wego |> view()
 
 ```{r}
 
-wego <- wego |>  mutate(
-  tsp_indicator = if_else(
-    between(DATE_TIME, 
-            as.Date("2025-02-03 12:00:00"), 
-            as.Date("2025-02-10 12:00:00")) |
-    (between(DATE_TIME, 
-            as.Date("2025-02-10 12:00:00"), 
-            as.Date("2025-04-28 12:00:00")) &
-       ADHERENCE <= -2) |
-    between(DATE_TIME, 
-            as.Date("2025-05-05 12:00:00"), 
-            as.Date("2025-05-12 12:00:00")), 1, 0)
-    
-  )
-
-wego
+# wego <- wego |>  mutate(
+#   tsp_indicator = if_else(
+#     between(DATE_TIME, 
+#             as.Date("2025-02-03 12:00:00"), 
+#             as.Date("2025-02-10 12:00:00")) |
+#     (between(DATE_TIME, 
+#             as.Date("2025-02-10 12:00:00"), 
+#             as.Date("2025-04-28 12:00:00")) &
+#        ADHERENCE <= -2) |
+#     between(DATE_TIME, 
+#             as.Date("2025-05-05 12:00:00"), 
+#             as.Date("2025-05-12 12:00:00")), 1, 0)
+#     
+#   )
+# 
+# wego
 
 ```
 
@@ -253,6 +257,9 @@ wego_tod_count_late <- wego |>
 
 wego_tod_count_late
 ```
+```{r}
+wego$time_of_day <- factor(wego$time_of_day, levels = c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night", "other")) 
+```
 
 
 ```{r}
@@ -261,10 +268,291 @@ ggplot(wego_tod_count_late, aes(fill=time_of_day, y=n, x=factor(ADJUSTED_LATE_CO
   geom_bar(position="fill", stat="identity")+ 
   xlab("Ontime (0) and Late (1) Buses") +
   ylab("Proportion of Buses") +
-  ggtitle("Proportion of Late and Ontime Buses Based on Time of Day")
+  ggtitle("Ontime and Late Buses Based on Time of Day")
 
 ```
 
+
+```{r}
+
+time_day_log <- glm(ADJUSTED_LATE_COUNT ~ tsp * time_of_day,
+                    data = wego,
+                    family = "binomial")
+
+summary(time_day_log)
+
+```
+
+
+```{r}
+
+# wego$time_of_day <- factor(wego$time_of_day, levels = c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night", "other")) 
+
+# wego$time_of_day <- relevel(wego$time_of_day, "early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night", "other")
+
+tod_plot <- ggplot(wego_tod_count_late, 
+       aes(fill = factor(time_of_day, levels = c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night", "other")),
+       y=n, 
+       x=factor(ADJUSTED_LATE_COUNT))) + 
+  geom_bar(position="fill", stat="identity", color="black") + 
+  labs(title = "Buses Often Run Late During the PM Peak", x = "", y = "Proportion of Buses", fill = "Time of Day") +
+  scale_x_discrete(labels=c("ontime", "late")) +
+  scale_fill_manual(labels = c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night", "other"), values = c("#191919", "#f3e4ee", "khaki", "#b4eef0", "#e3fafb", "#b5ffd0", "grey")) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+tod_plot
+```
+
+```{r}
+# dev.copy(tod_plot, 'time_of_day_orig.pdf')
+# # dev.off()
+ggsave("time_of_day_orig.png", plot = tod_plot, width=8, height=5, dpi=300)
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+```
+
+```{r}
+
+time_day_log <- glm(ADJUSTED_LATE_COUNT ~ tsp * time_of_day,
+                    data = wego,
+                    family = "binomial")
+
+summary(time_day_log)
+
+
+```
+
+
+```{r}
+
+lgrgmdl_tod <- coef(summary(time_day_log))
+
+lgrgmdl_tod
+
+```
+```{r}
+
+```
+
+```{r}
+summary(time_day_log)$coefficients[3, 1]
+
+```
+
+
+
+```{r}
+
+lg_tod_table <- as_tibble(rownames_to_column(data.frame(lgrgmdl_tod)))
+
+lg_tod_table["tsp_indicator"] = c(0,1,0,0,0,0,0,1,1,1,1,1)
+```
+
+
+```{r}
+
+
+```
+
+```{r}
+lg_tod_table
+```
+
+```{r}
+
+plot <- ggplot(lg_tod_table, aes(factor(rowname), Estimate, fill = factor(tsp_indicator))) + 
+  geom_bar(stat="identity", position = "dodge") + 
+  scale_fill_brewer(palette = "Set1")
+
+plot
+
+ggsave("attempt_plot.png", plot = plot)
+```
+
+```{r}
+lg_tod_table |>
+  group_by(tsp_indicator, Estimate) |>
+  ggplot(ggplot2::aes(rowname, Estimate)) +
+  geom_bar(ggplot2::aes(fill = tsp_indicator), position = "dodge", stat="identity")
+
+```
+```{r}
+lg_tod_limted <- lg_tod_table |> slice(c(-1,-2))
+
+lg_tod_limted
+```
+
+
+```{r}
+
+lg_tod_table |>
+  gather(tsp_indicator, Estimate, -rowname) |>
+  ggplot(aes(x=rowname, y=Estimate, fill=tsp_indicator)) +
+   geom_col(position = "dodge")
+
+```
+
+
+```{r}
+
+prob_late_tod <- wego |> 
+  group_by(time_of_day, tsp) |>
+  summarize(mean_adj_late_count = mean(ADJUSTED_LATE_COUNT)) 
+
+prob_late_tod
+
+```
+
+```{r}
+
+wego |>
+  group_by(time_of_day, tsp) |>
+  summarise(mean(ADJUSTED_LATE_COUNT))
+  
+
+```
+
+```{r}
+
+time_day_log <- glm(ADJUSTED_LATE_COUNT ~ tsp * time_of_day,
+                    data = wego,
+                    family = "binomial")
+
+summary(time_day_log)
+
+```
+
+
+```{r}
+
+tsp_tod <- with(wego, data.frame(time_of_day = c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night"), tsp=1))
+
+tsp_on_tod <- predict(time_day_log, tsp_tod, type="response")
+
+prcnt_tsp_on_tod <- tsp_on_tod*100
+prcnt_tsp_on_tod
+```
+
+
+```{r}
+
+tod_affect <- with(wego, data.frame(time_of_day = c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night"), tsp=0))
+
+tod_alone <- predict(time_day_log, tod_affect, type="response")
+
+prcnt_tsp_alone <- tod_alone*100
+prcnt_tsp_alone
+# pred <- tod_alone$fit
+plot(tod_alone, type="l", ylab="Predicted Probability to Vote", xlab="Age", bty="n")
+```
+
+```{r}
+tod_alone
+```
+
+```{r}
+
+df <- cbind.data.frame("time_of_day" = c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night"),  "tsp_on" = tod_alone, "tod_w_tsp" = tsp_tod)
+
+barplot(height = c(df$tsp_on, df$tod_w_tsp),
+    names.arg = df$time_of_day,
+    main = "With and Without TSP, TIME OF DAY",
+    xlab = "Time of Day",
+    ylab = "Probability of Late Buses",
+    col = c("#191919", "#f3e4ee", "khaki", "#b4eef0", "#e3fafb", "#b5ffd0", "grey"),
+    las = 2)
+
+```
+
+
+```{r}
+
+sbs_tod_tsp <- rbind(prcnt_tsp_alone,prcnt_tsp_on_tod)
+sbs_tod_tsp
+barplot(sbs_tod_tsp,beside=T)
+
+sbs_tod_tsp_rn <- cbind(rownames_list = rownames(sbs_tod_tsp), sbs_tod_tsp)
+sbs_tod_tsp_rn
+
+```
+```{r}
+
+
+tod_affect <- with(wego, data.frame(time_of_day = c("early_morning", "early_morning", "morning_peak", "morning_peak", "midday", "midday", "pm_peak", "pm_peak", "evening", "evening", "late_night", "late_night"), tsp=0))
+
+tod_alone <- predict(time_day_log, tod_affect, type="response")
+
+prcnt_tsp_alone <- tod_alone*100
+prcnt_tsp_alone
+# pred <- tod_alone$fit
+plot(tod_alone, type="l", ylab="Predicted Probability to Vote", xlab="Age", bty="n")
+
+```
+
+```{r}
+tod_affect
+```
+
+
+```{r}
+
+# ggplot(sbs_tod_tsp_rn, 
+#        aes(x=rownames_list, y=c(1,2, 3, 4, 5, 6), 
+#            fill=c(1,2,3,4,5,6)
+#            )
+#        ) +
+# scale_x_discrete(guide = guide_axis(angle = 45))
+# sbs_tod_tsp_rn
+```
+
+
+```{r}
+mid_tod_tsp <- list(
+  c( time_of_day = "early_morning", tsp = 0),
+  c( time_of_day = "early_morning", tsp = 1),
+  c( time_of_day = "morning_peak", tsp = 0),
+  c( time_of_day = "morning_peak", tsp = 1),
+  c( time_of_day = "midday", tsp = 0),
+  c( time_of_day = "midday", tsp = 1),
+  c( time_of_day = "pm_peak", tsp = 0),
+  c( time_of_day = "pm_peak", tsp = 1),
+  c( time_of_day = "evening", tsp = 0),
+  c( time_of_day = "evening", tsp = 1),
+  c( time_of_day = "late_night", tsp = 0),
+  c( time_of_day = "late_night", tsp = 1)
+  )
+mid_tod_tsp
+
+
+
+```
+```{r}
+
+middle_tod_tsp <- bind_rows(mid_tod_tsp)
+
+middle_tod_tsp
+
+middle_tod_tsp |>
+  mutate(tsp = as.numeric(tsp))
+```
+```{r}
+wego
+```
+
+```{r}
+# mid_tod_tsp
+# tod_stand_alone <- predict(time_day_log, middle_tod_tsp, type="response")
+
+```
 
 ```{r}
 ```
@@ -280,16 +568,5 @@ ggplot(wego_tod_count_late, aes(fill=time_of_day, y=n, x=factor(ADJUSTED_LATE_CO
 
 ```{r}
 ```
-
-
-```{r}
-```
-
-
-```{r}
-```
-
-
-
 
 
