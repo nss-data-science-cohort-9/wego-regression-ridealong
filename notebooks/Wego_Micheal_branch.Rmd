@@ -58,24 +58,15 @@ wego <- wego %>%
                                      as.Date('2025-05-05 12:00:00'),
                                     as.Date('2025-05-12 12:00:00')),
          .before = APRIL28_tspOFF)
+wego
 # Create HDWY deviation percentage column
 wego <- wego %>%
   mutate(HDWY_PERC_DEV = (HDWY_DEV/SCHEDULED_HDWY) * 100,
          .before = ADHERENCE)
 wego
-# Create TSP conditional HDWY filter 
-wego_hdwy <- wego %>%
-  filter(DATE_TIME > as.Date("2025-05-12 12:00:00")) %>%
-            filter(HDWY_PERC_DEV >= 20)
-
-wego_hdwy
-         
-
-```
-
-```{r}
-
-wego_hdwy_tsp <- wego_hdwy_tsp %>% mutate(TSP_INDICATOR = if_else(between(DATE_TIME, 
+#Add TSP Tracker 
+wego <- wego %>% mutate(TSP_INDICATOR =
+                                        if_else(between(DATE_TIME, 
                  as.Date("2025-02-03 12:00:00"), 
                  as.Date("2025-02-10 12:00:00")) |
     between(DATE_TIME, 
@@ -83,7 +74,108 @@ wego_hdwy_tsp <- wego_hdwy_tsp %>% mutate(TSP_INDICATOR = if_else(between(DATE_T
                  as.Date("2025-04-28 12:00:00")) |
     between(DATE_TIME, 
                  as.Date("2025-05-05 12:00:00"), 
-                 as.Date("2025-05-12 12:00:00")), 1, 0),)
+                 as.Date("2025-05-12 12:00:00")), 1, 0),
+    .before = HDWY_PERC_DEV)
+wego
+```
+
+```{r}
+# 
+late_stops <- wego %>% 
+  filter(TSP_INDICATOR == 1) %>% 
+  filter(ADHERENCE <= -6)
+late_stops
+```
+```
+
+```{r}
+```{r}
+ggplot(data = late_stops,
+       mapping = aes(x = DAY, fill = DAY)) +
+  geom_bar(colour = 'black') +
+  theme(axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      vjust = 1)) +
+  labs(
+    y = "Number of late stops",
+    x = "Weekdays",
+    title = "Late Stops by Day with TSP ON")
+```
+
+```{r}
+late_stops_TSPOFF <- wego %>% 
+  filter(TSP_INDICATOR == 0) %>%
+  filter(DATE_TIME > as.Date("2025-01-01 12:00:00")) %>% 
+  filter(ADHERENCE <= -6)
+late_stops_TSPOFF
+```
+
+```{r}
+ggplot(data = late_stops_TSPOFF,
+       mapping = aes(x = DAY, fill = DAY)) +
+  geom_bar(colour = 'black') +
+  theme(axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      vjust = 1)) +
+  labs(
+    y = "Number of late stops",
+    x = "Weekdays",
+    title = "Late Stops by Day with TSP OFF")
+```
+
+
+```{r}
+FEB3_ON_ontime <- wego %>% 
+  filter(FEB3_tspON_UNCON) %>% 
+  filter(ADHERENCE > -6)
+FEB3_ON_ontime
+```
+```{r}
+ggplot(data = FEB3_ON_ontime,
+       mapping = aes(x = DAY, fill = DAY)) +
+  geom_bar(colour = 'black') +
+  theme(axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      vjust = 1)) +
+  labs(
+    y = "Number of late Buses",
+    x = "Weekdays",
+    title = "Best days to take the Bus (Feb3-Feb10)")
+```
+```{r}
+Feb_ontime_late_combined <- bind_rows(FEB3_ON_ontime, FEB3_ON_late)
+```
+```{r}
+ggplot(Feb_ontime_late_combined, aes(x = DAY))
+```
+```{r}
+
+```
+
+
+
+```{r}
+# Create TSP conditional HDWY filter 
+wego_hdwy_late_TSPON <- wego %>%
+  filter(DATE_TIME > as.Date("2025-05-12 12:00:00")) %>%
+            filter(HDWY_PERC_DEV >= 20)
+
+wego_hdwy_late_TSPON
+```
+```{r}
+wego_hdwy_late_TSPOFF <- wego %>%
+  filter(APRIL28_tspOFF == TRUE) %>% 
+            filter(HDWY_PERC_DEV >= 20)
+wego_hdwy_late_TSPOFF
+```
+
+
+
+```{r}
+TSP_HDWY_Off <- 
 ```
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
