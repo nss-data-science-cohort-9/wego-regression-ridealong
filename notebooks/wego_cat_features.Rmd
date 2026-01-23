@@ -505,13 +505,7 @@ tod_affect
 
 ```{r}
 
-# ggplot(sbs_tod_tsp_rn, 
-#        aes(x=rownames_list, y=c(1,2, 3, 4, 5, 6), 
-#            fill=c(1,2,3,4,5,6)
-#            )
-#        ) +
-# scale_x_discrete(guide = guide_axis(angle = 45))
-# sbs_tod_tsp_rn
+
 ```
 
 
@@ -541,8 +535,9 @@ middle_tod_tsp <- bind_rows(mid_tod_tsp)
 
 middle_tod_tsp
 
-middle_tod_tsp |>
+middle_tod_tsp <- middle_tod_tsp |>
   mutate(tsp = as.numeric(tsp))
+
 ```
 ```{r}
 wego
@@ -550,9 +545,74 @@ wego
 
 ```{r}
 # mid_tod_tsp
-# tod_stand_alone <- predict(time_day_log, middle_tod_tsp, type="response")
+tod_stand_alone <- predict(time_day_log, middle_tod_tsp, type="response")
+tod_stand_alone
+```
+
+```{r}
+
+middle_tod_tsp <- middle_tod_tsp |>
+  mutate(Probs = tod_stand_alone)
+  
+```
+
+
+```{r}
+
+probs_tod_tsp <- ggplot(middle_tod_tsp,
+       aes(x=fct_relevel(time_of_day, c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night")), y=Probs,
+           fill=factor(tsp)
+           )
+       ) +
+  geom_bar(position="dodge", stat="identity", color="black") + 
+  labs(title = "The Effect of TSP on the Probability of Buses Being Late", x = "time_of_day", y = "Probability of Buses Being Late", fill = "tsp") +
+  scale_fill_manual(labels = c("tsp_off", "tsp_on"), values = c("#b4eef0", "khaki")) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+probs_tod_tsp
+
 
 ```
+```{r}
+
+Probs_tod_tsp_notitle <- ggplot(middle_tod_tsp,
+       aes(x=fct_relevel(time_of_day, c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night")), y=Probs,
+           fill=factor(tsp)
+           )
+       ) +
+  geom_bar(position="dodge", stat="identity", color="black") + 
+  labs(title = "", x = "time_of_day", y = "Probability of Buses Being Late", fill = "tsp") +
+  scale_fill_manual(labels = c("tsp_off", "tsp_on"), values = c("#b4eef0", "khaki")) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+Probs_tod_tsp_notitle
+
+
+```
+
+
+```{r}
+
+ggsave("probs_lt_tsp_tod_nttl.png", plot = Probs_tod_tsp_notitle, width=8, height=5, dpi=300)
+
+ggsave("probs_lt_tsp_tod.png", plot = probs_tod_tsp, width=8, height=5, dpi=300)
+```
+
+
+```{r}
+
+
+time_day_log <- glm(ADJUSTED_LATE_COUNT ~ tsp * time_of_day * day_of_week,
+                    data = wego,
+                    family = "binomial")
+
+summary(time_day_log)
+
+
+```
+
 
 ```{r}
 ```
@@ -569,4 +629,7 @@ wego
 ```{r}
 ```
 
+
+```{r}
+```
 
