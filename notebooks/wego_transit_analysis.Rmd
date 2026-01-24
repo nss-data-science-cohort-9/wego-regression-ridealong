@@ -127,8 +127,19 @@ wego_hr |>
   summarize(mean(ADJUSTED_LATE_COUNT))
   
 ```
-
-
+>
+>
+> ### Logistic Regression Model
+>
+> 
+> Now that we have created features in the data, we can test to see which variables have the strongest effect on busses runing late. Below we examine TSP and its impact before controlling for other variables. There is a modest, but statistically significant effect from tsp in this model.
+>
+>
+>* The probability of a bus being late is 12.05%
+>* The probabbility of a bus running late when TSP is activated is 11.47%
+>* This data suggest TSP does help busses stay on schedule
+>
+>
 
 ```{r}
 # Fit logistic regression model based on tsp
@@ -179,10 +190,18 @@ wego_hr <- wego_hr |>  mutate(
 
 ```
 
-
-
-
-
+> 
+>
+> ### Multivariable Logistic Regression
+>
+> This model accounts for several data features we built previously. Here, we incorporate hour, time of day and day of week, in addition to TSP. These other variables largely contribute to late busses. We can see from this model that hour, when accounting for all other variables constant, is the strongest factor in our model. 
+>
+>
+>* As the day progresses, busses are more likely to be late
+>* Day of week, hour and time of day have a larger effect than TSP alone
+>* TSP has a very small effect
+>
+>
 
 ```{r}
 # Create multivariable model
@@ -194,8 +213,6 @@ log_reg_multi <- glm(ADJUSTED_LATE_COUNT ~ tsp_indicator + time_of_day + DAY_OF_
 ```{r}
 summary(log_reg_multi)
 ```
-
-
 
 ```{r}
 
@@ -233,7 +250,6 @@ ggsave(
   dpi = 300
 )
 ```
-
 
 ```{r}
 # PLot average late count by day of week
@@ -311,6 +327,7 @@ ggsave(
 ```
 
 ```{r}
+# Orient tsp values for plot
 mid_tod_tsp <- list(
   c( time_of_day = "early_morning", tsp = 0),
   c( time_of_day = "early_morning", tsp = 1),
@@ -327,23 +344,33 @@ mid_tod_tsp <- list(
   )
 ```
 
+```{r}
+# Bind rows together
+middle_tod_tsp <- bind_rows(mid_tod_tsp)
+
+# Change to numeric 
+middle_tod_tsp <- middle_tod_tsp |>
+  mutate(tsp = as.numeric(tsp))
+
+```
 
 ```{r}
+# Create prediction values for plot
 tod_stand_alone <- predict(
-  time_day_log, 
-  middle_tod_tsp, 
+time_day_log, 
+ middle_tod_tsp, 
   type="response"
   )
 ```
 
-
 ```{r}
+# Assign probabilities for plot
 middle_tod_tsp <- middle_tod_tsp |>
-  mutate(Probs = tod_stand_alone)
+ mutate(Probs = tod_stand_alone)
 ```
 
-
 ```{r}
+# Create plot to show probability based on TSP
 probs_tod_tsp <- ggplot(middle_tod_tsp,
        aes(x=fct_relevel(time_of_day, c("early_morning", "morning_peak", "midday", "pm_peak", "evening", "late_night")), y=Probs,
            fill=factor(tsp)
@@ -357,9 +384,3 @@ probs_tod_tsp <- ggplot(middle_tod_tsp,
 
 probs_tod_tsp
 ```
-
-
-
-
-
-
