@@ -350,18 +350,31 @@ middle_tod_tsp <- bind_rows(mid_tod_tsp)
 
 # Change to numeric 
 middle_tod_tsp <- middle_tod_tsp |>
-  mutate(tsp = as.numeric(tsp))
+  mutate(tsp_indicator = as.numeric(tsp))
 
 ```
 
 ```{r}
+log_time_of_day <- glm(ADJUSTED_LATE_COUNT ~ tsp_indicator + time_of_day,
+                    data = wego_hr,
+                    family = "binomial")
+  
+```
+
+
+```{r}
 # Create prediction values for plot
 tod_stand_alone <- predict(
-time_day_log, 
+log_time_of_day, 
  middle_tod_tsp, 
   type="response"
   )
 ```
+
+```{r}
+middle_tod_tsp
+```
+
 
 ```{r}
 # Assign probabilities for plot
